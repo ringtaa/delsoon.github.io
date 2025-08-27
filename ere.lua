@@ -22,31 +22,26 @@ local function rainbowStroke(stroke)
     end)
 end
 
-local visitedServers = {}
-
 local function hopServer()
     local gameId = game.PlaceId
-    local found = false
-    local success, body = pcall(function()
-        return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
-    end)
-    if success then
-        local data = HttpService:JSONDecode(body)
-        for _, server in ipairs(data.data) do
-            if server.playing < server.maxPlayers and server.id ~= game.JobId and not visitedServers[server.id] then
-                visitedServers[server.id] = true
-                found = true
-                updateInfo("Teleporting to new server...")
-                TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
-                break
+    while true do
+        local success, body = pcall(function()
+            return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
+        end)
+        if success then
+            local data = HttpService:JSONDecode(body)
+            for _, server in ipairs(data.data) do
+                if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                    while true do
+                        pcall(function()
+                            TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
+                        end)
+                        task.wait(0.1)
+                    end
+                end
             end
         end
-    end
-    if not found then
-        updateInfo("No available servers found. Retrying in 3 seconds...")
-        visitedServers = {}
-        task.wait(3)
-        hopServer()
+        task.wait(3) -- Added delay here (was 0.2 before), now waits 3 seconds between server hops
     end
 end
 
@@ -56,7 +51,6 @@ task.spawn(function()
             if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                 if char:FindFirstChild("Humanoid").DisplayName == LocalPlayer.DisplayName then
                     hopServer()
-                    break
                 end
             end
         end
@@ -154,7 +148,7 @@ repeat task.wait() until LocalPlayer.Character and LocalPlayer.Character:FindFir
 
 chest = workspace.Items:FindFirstChild("Stronghold Diamond Chest")
 if not chest then
-    updateInfo("Chest not found, hopping server...")
+    updateInfo("Chest not found (my fault), hopping server...")
     roundActive = false
     hopServer()
     return
