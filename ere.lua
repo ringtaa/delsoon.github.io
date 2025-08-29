@@ -41,7 +41,7 @@ local function hopServer()
                 end
             end
         end
-        task.wait(3) -- Added delay here (was 0.2 before), now waits 3 seconds between server hops
+        task.wait(0.2)
     end
 end
 
