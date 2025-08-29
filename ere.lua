@@ -32,24 +32,35 @@ end)
 
 local function hopServer()
     local gameId = game.PlaceId
-    local success, body = pcall(function()
-        return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
-    end)
-    if success then
-        local data = HttpService:JSONDecode(body)
-        for _, server in ipairs(data.data) do
-            if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                if not teleporting then
-                    teleporting = true
-                    pcall(function()
-                        TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
-                    end)
+    while true do
+        local success, body = pcall(function()
+            return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
+        end)
+        if success then
+            local data = HttpService:JSONDecode(body)
+            local hopped = false
+            for _, server in ipairs(data.data) do
+                if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                    if not teleporting then
+                        teleporting = true
+                        pcall(function()
+                            TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
+                        end)
+                        hopped = true
+                        break
+                    end
                 end
+            end
+            if hopped then
                 while teleporting do
                     task.wait(1)
                 end
                 break
+            else
+                task.wait(2)
             end
+        else
+            task.wait(2)
         end
     end
 end
