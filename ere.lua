@@ -13,10 +13,10 @@ local startTime
 
 local function rainbowStroke(stroke)
     task.spawn(function()
-        while true do
-            for hue = 0, 1, 0.02 do
+        while task.wait() do
+            for hue = 0, 1, 0.01 do
                 stroke.Color = Color3.fromHSV(hue, 1, 1)
-                task.wait(0.01)
+                task.wait(0.02)
             end
         end
     end)
@@ -24,24 +24,38 @@ end
 
 local function hopServer()
     local gameId = game.PlaceId
-    local success, body = pcall(function()
-        return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
-    end)
-    if success then
-        local data = HttpService:JSONDecode(body)
-        for _, server in ipairs(data.data) do
-            if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                pcall(function()
-                    TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
-                end)
-                task.wait(0.05)
-                return
+    while true do
+        local success, body = pcall(function()
+            return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
+        end)
+        if success then
+            local data = HttpService:JSONDecode(body)
+            for _, server in ipairs(data.data) do
+                if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                    while true do
+                        pcall(function()
+                            TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
+                        end)
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end
+        task.wait(3) -- Added delay here (was 0.2 before), now waits 3 seconds between server hops
+    end
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        for _, char in pairs(workspace.Characters:GetChildren()) do
+            if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                if char:FindFirstChild("Humanoid").DisplayName == LocalPlayer.DisplayName then
+                    hopServer()
+                end
             end
         end
     end
-    task.wait(0.05)
-    hopServer()
-end
+end)
 
 a = Instance.new("ScreenGui")
 a.Name = "DiamondFarmUI"
@@ -115,7 +129,7 @@ local roundDiamonds = 0
 local roundActive = false
 
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.2) do
         local currentDiamondCount = tonumber(DiamondCount.Text) or 0
         totalDiamondsLabel.Text = "Total Diamonds: " .. currentDiamondCount
         if roundActive then
@@ -130,11 +144,11 @@ local function updateInfo(text)
     infoLabel.Text = text
 end
 
-repeat task.wait(0.05) until LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+repeat task.wait() until LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
 chest = workspace.Items:FindFirstChild("Stronghold Diamond Chest")
 if not chest then
-    updateInfo("Chest not found, hopping server...")
+    updateInfo("Chest not found (my fault), hopping server...")
     roundActive = false
     hopServer()
     return
@@ -144,23 +158,23 @@ updateInfo("Teleporting to chest...")
 LocalPlayer.Character:PivotTo(CFrame.new(chest:GetPivot().Position))
 
 repeat
-    task.wait(0.05)
+    task.wait(0.1)
     local prox = chest:FindFirstChild("Main")
     if prox and prox:FindFirstChild("ProximityAttachment") then
         proxPrompt = prox.ProximityAttachment:FindFirstChild("ProximityInteraction")
     end
 until proxPrompt
 
-updateInfo("Opening stronghold chest...")
+updateInfo("Trying to open stronghold chest...")
 
 startTime = tick()
 local chestOpened = false
-while proxPrompt and proxPrompt.Parent and (tick() - startTime) < 5 do
+while proxPrompt and proxPrompt.Parent and (tick() - startTime) < 10 do
     local beforeDiamonds = tonumber(DiamondCount.Text) or 0
     pcall(function()
         fireproximityprompt(proxPrompt)
     end)
-    task.wait(0.05)
+    task.wait(0.2)
     local afterDiamonds = tonumber(DiamondCount.Text) or 0
     if afterDiamonds > beforeDiamonds then
         chestOpened = true
@@ -169,32 +183,27 @@ while proxPrompt and proxPrompt.Parent and (tick() - startTime) < 5 do
 end
 
 if not chestOpened then
-    updateInfo("Couldn't open chest, hopping server...")
+    updateInfo("Couldn't open stronghold chest, hopping server...")
     roundActive = false
     hopServer()
     return
 end
 
-updateInfo("Collecting diamonds...")
+updateInfo("Searching for diamonds in workspace...")
 roundActive = true
 prevDiamondCount = tonumber(DiamondCount.Text) or 0
 
-local diamondCheckStart = tick()
-while not workspace:FindFirstChild("Diamond", true) and (tick() - diamondCheckStart) < 3 do
-    task.wait(0.01)
-end
+repeat task.wait(0.1) until workspace:FindFirstChild("Diamond", true)
 
 local diamondsFound = 0
 for _, v in pairs(workspace:GetDescendants()) do
     if v.ClassName == "Model" and v.Name == "Diamond" then
-        pcall(function()
-            Remote:FireServer(v)
-        end)
+        Remote:FireServer(v)
         diamondsFound = diamondsFound + 1
-        task.wait(0.01)
     end
 end
 
-updateInfo("Collected " .. diamondsFound .. " diamonds, hopping server...")
-task.wait(0.5)
+updateInfo("Took all diamonds (" .. diamondsFound .. "), hopping server...")
+
+task.wait(1)
 hopServer()
