@@ -22,26 +22,35 @@ local function rainbowStroke(stroke)
     end)
 end
 
+local teleporting = false
+
+TeleportService.TeleportInitFailed:Connect(function(player)
+    if player == LocalPlayer then
+        teleporting = false
+    end
+end)
+
 local function hopServer()
     local gameId = game.PlaceId
-    while true do
-        local success, body = pcall(function()
-            return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
-        end)
-        if success then
-            local data = HttpService:JSONDecode(body)
-            for _, server in ipairs(data.data) do
-                if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                    while true do
-                        pcall(function()
-                            TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
-                        end)
-                        task.wait(0.1)
-                    end
+    local success, body = pcall(function()
+        return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
+    end)
+    if success then
+        local data = HttpService:JSONDecode(body)
+        for _, server in ipairs(data.data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                if not teleporting then
+                    teleporting = true
+                    pcall(function()
+                        TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
+                    end)
                 end
+                while teleporting do
+                    task.wait(1)
+                end
+                break
             end
         end
-        task.wait(0.2)
     end
 end
 
