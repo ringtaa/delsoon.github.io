@@ -65,3 +65,21 @@ Tabs.Hitbox:Button({
     end,
 })
 
+Tabs.Hitbox:Section({
+    Title = "Auto Win",
+    Icon = "sword",
+})
+
+Tabs.Hitbox:Button({
+    Title = "Guest Auto Block/Punch",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/castletpfast.github.io/refs/heads/main/FASTCASTLE.lua"))()
+    end,
+})
+
+Tabs.Hitbox:Button({
+    Title = "Hitbox Extender",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/castletpfast.github.io/refs/heads/main/FASTCASTLE.lua"))()
+    end,
+})
