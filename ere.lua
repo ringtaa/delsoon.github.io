@@ -66,8 +66,8 @@ Tabs.Hitbox:Button({
 })
 
 Tabs.Hitbox:Section({
-    Title = "Auto Win",
-    Icon = "sword",
+    Title = "Auto Block",
+    Icon = "hand-fist",
 })
 
 Tabs.Hitbox:Button({
